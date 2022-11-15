@@ -10,6 +10,8 @@
 
 int main(int argc, char const *argv[])
 {
+    printf("Client started.\n");
+
     int server_socket_fd, bytes_read, bytes_sent, op_code;
     struct sockaddr_in server_addr;
     const char *ip_str = "127.0.0.1";
@@ -70,6 +72,7 @@ int main(int argc, char const *argv[])
                 "3 - Recieve message\n");
             break;
         case 2:
+            printf("Sending a message...\n");
             bytes_sent = send(server_socket_fd, hello_msg, strlen(hello_msg), 0);
             if (bytes_sent < 0)
             {
@@ -81,6 +84,7 @@ int main(int argc, char const *argv[])
             }
             break;
         case 3:
+            printf("Reading a message...\n");
             bytes_read = recv(server_socket_fd, buffer, BUFFER_SIZE, 0);
             if (bytes_read < 0)
             {
@@ -90,6 +94,7 @@ int main(int argc, char const *argv[])
             {
                 printf("Message read (%d byte(s)):\n%s\n", bytes_read, buffer);
             }
+            buffer[0] = '\0';
             break;
         default:
             printf("Unknown operation code.");
@@ -99,5 +104,6 @@ int main(int argc, char const *argv[])
 
     // Closing the connected socket
     close(server_socket_fd);
+    printf("Client endend.\n");
     return 0;
 }
