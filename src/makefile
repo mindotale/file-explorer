@@ -1,6 +1,7 @@
 all: buffer.o client.o server.o
 	g++ buffer.o client.o -o client
 	g++ buffer.o server.o -o server
+	rm -f *.o
 
 client: buffer.o client.o
 	g++ buffer.o client.o -o client
