@@ -1,9 +1,25 @@
-all: client.o server.o
-		g++ client.o -o client
-		g++ server.o -o server
-client.o: client.cpp
-		g++ -c client.cpp -o client.o
-server.o: server.cpp
-		g++ -c server.cpp -o server.o
+all: buffer.o client.o server.o
+	g++ buffer.o client.o -o client
+	g++ buffer.o server.o -o server
+
+client: buffer.o client.o
+	g++ buffer.o client.o -o client
+
+server: buffer.o server.o
+	g++ buffer.o server.o -o server
+
+buffer.o:
+	g++ -c buffer.cpp -o buffer.o -std=c++11
+
+client.o:
+	g++ -c client.cpp -o client.o -std=c++11
+
+server.o:
+	g++ -c server.cpp -o server.o -std=c++11
+
 clean:
-		rm *.o client server
+	rm -f client.o
+	rm -f server.o
+	rm -f buffer.o
+	rm -f client
+	rm -f server
