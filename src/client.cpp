@@ -10,8 +10,9 @@
 
 int main(int argc, char const *argv[])
 {
-    int server_socket_fd, client_socket_fd, bytes_read;
+    int server_socket_fd, bytes_read;
     struct sockaddr_in server_addr;
+    const char* ip_str = "127.0.0.1";
 
     char buffer[BUFFER_SIZE] = {0};
     char *hello_msg = "Hello from client";
@@ -27,17 +28,16 @@ int main(int argc, char const *argv[])
     server_addr.sin_port = htons(PORT);
 
     // Convert IPv4 and IPv6 addresses from text to binary form
-    if (inet_pton(AF_INET, "127.0.0.1", &server_addr.sin_addr) <= 0)
+    if (inet_pton(AF_INET, ip_str, &server_addr.sin_addr) <= 0)
     {
         printf("\nInvalid address/ Address not supported \n");
         return -1;
     }
 
-    client_socket_fd = connect(
+    if (connect(
             server_socket_fd,
             (struct sockaddr *)&server_addr,
-            sizeof(server_addr));
-    if (client_socket_fd < 0)
+            sizeof(server_addr)) < 0)
     {
         printf("\nConnection Failed \n");
         return -1;
@@ -49,6 +49,6 @@ int main(int argc, char const *argv[])
     printf("%s\n", buffer);
 
     // Closing the connected socket
-    close(client_socket_fd);
+    close(server_socket_fd);
     return 0;
 }
