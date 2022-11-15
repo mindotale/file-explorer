@@ -10,9 +10,9 @@
 
 int main(int argc, char const *argv[])
 {
-    int server_socket_fd, bytes_read;
+    int server_socket_fd, bytes_read, bytes_sent, op_code;
     struct sockaddr_in server_addr;
-    const char* ip_str = "127.0.0.1";
+    const char *ip_str = "127.0.0.1";
 
     char buffer[BUFFER_SIZE] = {0};
     char *hello_msg = "Hello from client";
@@ -20,7 +20,7 @@ int main(int argc, char const *argv[])
     server_socket_fd = socket(AF_INET, SOCK_STREAM, 0);
     if (server_socket_fd < 0)
     {
-        printf("\n Socket creation error \n");
+        printf("Socket creation error.\n");
         return -1;
     }
 
@@ -30,23 +30,72 @@ int main(int argc, char const *argv[])
     // Convert IPv4 and IPv6 addresses from text to binary form
     if (inet_pton(AF_INET, ip_str, &server_addr.sin_addr) <= 0)
     {
-        printf("\nInvalid address/ Address not supported \n");
+        printf("Invalid address or address is not supported.\n");
         return -1;
     }
 
+    printf("Trying to %s...\n", ip_str);
     if (connect(
             server_socket_fd,
             (struct sockaddr *)&server_addr,
             sizeof(server_addr)) < 0)
     {
-        printf("\nConnection Failed \n");
+        printf("Connection failed.\n");
         return -1;
     }
+    printf("Connection established.\n");
 
-    send(server_socket_fd, hello_msg, strlen(hello_msg), 0);
-    printf("Hello message sent\n");
-    bytes_read = recv(server_socket_fd, buffer, BUFFER_SIZE, 0);
-    printf("%s\n", buffer);
+    printf(
+        "0 - Exit\n"
+        "1 - Help\n"
+        "2 - Send message\n"
+        "3 - Recieve message\n");
+    while (true)
+    {
+        printf("> ");
+        scanf("%d", &op_code);
+
+        if (op_code == 0)
+        {
+            break;
+        }
+
+        switch (op_code)
+        {
+        case 1:
+            printf(
+                "0 - Exit\n"
+                "1 - Help\n"
+                "2 - Send message\n"
+                "3 - Recieve message\n");
+            break;
+        case 2:
+            bytes_sent = send(server_socket_fd, hello_msg, strlen(hello_msg), 0);
+            if (bytes_sent < 0)
+            {
+                printf("Error.\n");
+            }
+            else
+            {
+                printf("Message sent (%d byte(s)).\n", bytes_sent);
+            }
+            break;
+        case 3:
+            bytes_read = recv(server_socket_fd, buffer, BUFFER_SIZE, 0);
+            if (bytes_read < 0)
+            {
+                printf("Error.\n");
+            }
+            else
+            {
+                printf("Message read (%d byte(s)):\n%s\n", bytes_read, buffer);
+            }
+            break;
+        default:
+            printf("Unknown operation code.");
+            break;
+        }
+    }
 
     // Closing the connected socket
     close(server_socket_fd);
