@@ -39,7 +39,7 @@ int main(int argc, char const* argv[])
     }
     send(sock, hello, strlen(hello), 0);
     printf("Hello message sent\n");
-    valread = read(sock, buffer, 1024);
+    valread = recv(sock, buffer, 1024, 0);
     printf("%s\n", buffer);
  
     // closing the connected socket
