@@ -12,7 +12,7 @@
 
 int main(int argc, char const *argv[])
 {
-    int server_socket_fd, client_socket_fd, recv_value;
+    int server_socket_fd, client_socket_fd, bytes_read;
     struct sockaddr_in server_addr;
     int server_addr_len = sizeof(server_addr);
     int opt = 1;
@@ -70,7 +70,7 @@ int main(int argc, char const *argv[])
             exit(EXIT_FAILURE);
         }
 
-        recv_value = recv(client_socket_fd, buffer, BUFFER_SIZE, 0);
+        bytes_read = recv(client_socket_fd, buffer, BUFFER_SIZE, 0);
         printf("%s\n", buffer);
         send(client_socket_fd, hello_msg, strlen(hello_msg), 0);
         printf("Hello message sent\n");

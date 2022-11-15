@@ -10,7 +10,7 @@
 
 int main(int argc, char const *argv[])
 {
-    int server_socket_fd, client_socket_fd, recv_value;
+    int server_socket_fd, client_socket_fd, bytes_read;
     struct sockaddr_in server_addr;
 
     char buffer[BUFFER_SIZE] = {0};
@@ -45,7 +45,7 @@ int main(int argc, char const *argv[])
 
     send(server_socket_fd, hello_msg, strlen(hello_msg), 0);
     printf("Hello message sent\n");
-    recv_value = recv(server_socket_fd, buffer, BUFFER_SIZE, 0);
+    bytes_read = recv(server_socket_fd, buffer, BUFFER_SIZE, 0);
     printf("%s\n", buffer);
 
     // Closing the connected socket
