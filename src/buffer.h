@@ -1,0 +1,34 @@
+#ifndef H_BUFFER
+#define H_BUFFER
+
+#define BUFFER_SIZE 2048
+
+#include <string>
+
+class Buffer
+{
+public:
+    Buffer();
+    Buffer(char* buf, int len);
+    Buffer(const Buffer &copy);
+    ~Buffer();
+
+    int getint();
+    void putint(int num);
+
+    std::string getstring();
+    void putstring(std::string str);
+
+    int size();
+    void reset_offset();
+
+    explicit operator char*() { return buffer; }
+    explicit operator void*() { return buffer; }
+
+private:
+    char buffer[BUFFER_SIZE];
+    int buf_size;
+    int offset;
+};
+
+#endif // H_BUFFER
