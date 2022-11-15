@@ -1,48 +1,54 @@
-// Client side C/C++ program to demonstrate Socket
-// programming
-#include <arpa/inet.h>
 #include <stdio.h>
 #include <string.h>
-#include <sys/socket.h>
+
 #include <unistd.h>
+#include <sys/socket.h>
+#include <arpa/inet.h>
+
 #define PORT 8080
- 
-int main(int argc, char const* argv[])
+#define BUFFER_SIZE 1024
+
+int main(int argc, char const *argv[])
 {
-    int sock = 0, valread, client_fd;
-    struct sockaddr_in serv_addr;
-    char* hello = "Hello from client";
-    char buffer[1024] = { 0 };
-    if ((sock = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
+    int server_socket_fd, bytes_read;
+    struct sockaddr_in server_addr;
+    const char* ip_str = "127.0.0.1";
+
+    char buffer[BUFFER_SIZE] = {0};
+    char *hello_msg = "Hello from client";
+
+    server_socket_fd = socket(AF_INET, SOCK_STREAM, 0);
+    if (server_socket_fd < 0)
+    {
         printf("\n Socket creation error \n");
         return -1;
     }
- 
-    serv_addr.sin_family = AF_INET;
-    serv_addr.sin_port = htons(PORT);
- 
-    // Convert IPv4 and IPv6 addresses from text to binary
-    // form
-    if (inet_pton(AF_INET, "127.0.0.1", &serv_addr.sin_addr)
-        <= 0) {
-        printf(
-            "\nInvalid address/ Address not supported \n");
+
+    server_addr.sin_family = AF_INET;
+    server_addr.sin_port = htons(PORT);
+
+    // Convert IPv4 and IPv6 addresses from text to binary form
+    if (inet_pton(AF_INET, ip_str, &server_addr.sin_addr) <= 0)
+    {
+        printf("\nInvalid address/ Address not supported \n");
         return -1;
     }
- 
-    if ((client_fd
-         = connect(sock, (struct sockaddr*)&serv_addr,
-                   sizeof(serv_addr)))
-        < 0) {
+
+    if (connect(
+            server_socket_fd,
+            (struct sockaddr *)&server_addr,
+            sizeof(server_addr)) < 0)
+    {
         printf("\nConnection Failed \n");
         return -1;
     }
-    send(sock, hello, strlen(hello), 0);
+
+    send(server_socket_fd, hello_msg, strlen(hello_msg), 0);
     printf("Hello message sent\n");
-    valread = read(sock, buffer, 1024);
+    bytes_read = recv(server_socket_fd, buffer, BUFFER_SIZE, 0);
     printf("%s\n", buffer);
- 
-    // closing the connected socket
-    close(client_fd);
+
+    // Closing the connected socket
+    close(server_socket_fd);
     return 0;
 }
