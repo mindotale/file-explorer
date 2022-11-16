@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <sstream>
 #include <iostream>
 #include <string.h>
 #include <vector>
@@ -129,13 +130,13 @@ void read_inputs()
                     int size = response.getint();
                     int creation_datetime = response.getint();
 
-                    sprintf(msg, "%9s %32s %i %i", "directory", filename.c_str(), size, creation_datetime);
+                    sprintf(msg, "%-9s %-32s %i %i", "directory", filename.c_str(), size, creation_datetime);
                     add_to_console_buffer(msg);
                 }
                 else
                 {
                     std::string dirname = response.getstring();
-                    sprintf(msg, "%9s %32s", "file", dirname.c_str());
+                    sprintf(msg, "%-9s %-32s", "file", dirname.c_str());
                     add_to_console_buffer(msg);
                 }
             }
@@ -239,14 +240,16 @@ void update_console()
 
 std::vector<std::string> split_string(std::string text)
 {
+    char space_char = ' ';
     std::vector<std::string> words;
 
-    size_t pos = 0;
-    while((pos = text.find(" ")) != std::string::npos)
-    {
-        words.push_back(text.substr(0, pos));
-        text.erase(0, pos + 1);
-    }
+    std::stringstream sstream(text);
+    std::string word;
 
+    while(std::getline(sstream, word, space_char))
+    {
+        word.erase(std::remove_if(word.begin(), word.end(), isspace), word.end());
+        words.push_back(word);
+    }
     return words;
 }
