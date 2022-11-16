@@ -104,6 +104,7 @@ int main(int argc, char const *argv[])
 
     // Closing the connected socket
     close(server_socket_fd);
+    
     printf("Client endend.\n");
     return 0;
 }

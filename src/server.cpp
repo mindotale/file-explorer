@@ -96,7 +96,7 @@ int main(int argc, char const *argv[])
 
 void* request_handler(void* param)
 {
-    int  client_socket_fd, bytes_read;
+    int  client_socket_fd, bytes_read, bytes_sent;
     char buffer[BUFFER_SIZE] = {0};
     char *response_msg = "Response from the server.";
 
@@ -105,9 +105,14 @@ void* request_handler(void* param)
     while(true)
     {
         bytes_read = recv(client_socket_fd, buffer, BUFFER_SIZE, 0);
-        send(client_socket_fd, response_msg, strlen(response_msg), 0);
+        bytes_sent = send(client_socket_fd, response_msg, strlen(response_msg), MSG_NOSIGNAL);
+        if(bytes_sent <= 0)
+        {
+            break;
+        }
     }
     
+    // Closing the client socket
     close(client_socket_fd);
     pthread_exit(NULL);
 }
