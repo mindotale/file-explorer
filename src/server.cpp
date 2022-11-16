@@ -7,7 +7,7 @@
 #include <netinet/in.h>
 #include <pthread.h>
 
-#define PORT 8080
+#define PORT 9554
 #define BUFFER_SIZE 1024
 #define QUEUE_SIZE 8
 
@@ -33,7 +33,7 @@ int main(int argc, char const *argv[])
     // Forcefully attaching socket to the port PORT
     if (setsockopt(
             server_socket_fd, SOL_SOCKET,
-            SO_REUSEADDR | SO_REUSEPORT,
+            SO_REUSEADDR,
             &opt,
             sizeof(opt)))
     {
