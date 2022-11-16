@@ -131,7 +131,7 @@ void read_inputs()
                     int size = response.getint();
                     int creation_datetime = response.getint();
 
-                    sprintf(msg, "%-9s %-32s %9s    %-30s", "directory", filename.c_str(),
+                    sprintf(msg, "%-9s %-32s %9s    %-30s", "file", filename.c_str(),
                         human_readable_size(size).c_str(),
                         human_readable_datetime(creation_datetime).c_str());
 
@@ -140,7 +140,7 @@ void read_inputs()
                 else
                 {
                     std::string dirname = response.getstring();
-                    sprintf(msg, "%-9s %-32s", "file", dirname.c_str());
+                    sprintf(msg, "%-9s %-32s", "directory", dirname.c_str());
                     add_to_console_buffer(msg);
                 }
             }
