@@ -108,7 +108,11 @@ void* request_handler(void* param)
 
         bytes_read = recv(client_socket_fd, (void*)request, request.max_size(), 0);
 
-        if(bytes_read <= 0) continue;
+        if(bytes_read < 0)
+        {
+            printf("Connection lost.\n");
+            break;
+        }
 
         printf("Message read (%d byte(s))\n", bytes_read);
 
@@ -169,8 +173,9 @@ void* request_handler(void* param)
             break;
         }
     }
-
+    
     // Closing the client socket
     close(client_socket_fd);
+    printf("Connection closed.\n");
     pthread_exit(NULL);
 }
