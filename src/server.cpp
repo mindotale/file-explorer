@@ -7,9 +7,9 @@
 #include <netinet/in.h>
 #include <pthread.h>
 
+#include "protocol.h"
 #include "buffer.h"
 
-#define PORT 9554
 #define QUEUE_SIZE 8
 
 void* request_handler(void* param);
@@ -109,7 +109,11 @@ void* request_handler(void* param)
     {
         bytes_read = recv(client_socket_fd, (void*)buffer, buffer.max_size(), 0);
 
-        printf("Message read (%d byte(s)): %s\n", bytes_read, buffer.getstring().c_str());  
+        if(bytes_read > 0)
+        {
+            printf("Message read (%d byte(s)): %s\n", bytes_read, buffer.getstring().c_str());
+        }
+
         buffer.clear();
 
         bytes_sent = send(client_socket_fd, (void*)response_msg, response_msg.size(), MSG_NOSIGNAL);
@@ -118,7 +122,7 @@ void* request_handler(void* param)
             break;
         }
     }
-    
+
     // Closing the client socket
     close(client_socket_fd);
     pthread_exit(NULL);

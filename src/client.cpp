@@ -5,9 +5,8 @@
 #include <sys/socket.h>
 #include <arpa/inet.h>
 
+#include "protocol.h"
 #include "buffer.h"
-
-#define PORT 9554
 
 int main(int argc, char const *argv[])
 {
