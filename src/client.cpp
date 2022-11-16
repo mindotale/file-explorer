@@ -4,6 +4,7 @@
 #include <string.h>
 #include <vector>
 #include <deque>
+#include <algorithm>
 
 #include <unistd.h>
 #include <sys/socket.h>
@@ -130,7 +131,10 @@ void read_inputs()
                     int size = response.getint();
                     int creation_datetime = response.getint();
 
-                    sprintf(msg, "%-9s %-32s %i %i", "directory", filename.c_str(), size, creation_datetime);
+                    sprintf(msg, "%-9s %-32s %9s    %-30s", "directory", filename.c_str(),
+                        human_readable_size(size).c_str(),
+                        human_readable_datetime(creation_datetime).c_str());
+
                     add_to_console_buffer(msg);
                 }
                 else
@@ -188,6 +192,11 @@ void read_inputs()
                     current_path = new_path;
                     update_console();
                 }
+                else
+                {
+                    sprintf(msg, "Couldn't go to directory \"%s\" - No such directory", splits[1].c_str());
+                    add_to_console_buffer(msg);
+                }
             }
             else
             {
@@ -236,6 +245,37 @@ void update_console()
     {
         printf("%s\n", i->c_str());
     }
+}
+
+std::string human_readable_size(int size)
+{
+    const char* suffix[] = {"B", "KB", "MB", "GB", "TB"};
+    char length = sizeof(suffix) / sizeof(suffix[0]);
+
+    int i = 0;
+    double dblBytes = size;
+
+    if(size > 1024)
+    {
+        for (i = 0; (size / 1024) > 0 && i<length-1; i++, size /= 1024)
+        {
+            dblBytes = size / 1024.0;
+        }
+    }
+
+    char output[256];
+    sprintf(output, "%.02lf %s", dblBytes, suffix[i]);
+    
+    return output;
+}
+
+std::string human_readable_datetime(time_t datetime)
+{
+    struct tm *dt;
+    char buffer[30];
+    dt = localtime(&datetime);
+    strftime(buffer, sizeof(buffer), "%d %b %Y %H:%M:%S", dt);
+    return std::string(buffer);
 }
 
 std::vector<std::string> split_string(std::string text)

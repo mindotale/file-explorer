@@ -16,6 +16,9 @@ extern void add_to_console_buffer(std::string str);
 extern void print_bar();
 extern void update_console();
 
+extern std::string human_readable_size(int size);
+extern std::string human_readable_datetime(time_t datetime);
+
 extern std::vector<std::string> split_string(std::string str);
 
 #endif // H_CLIENT
