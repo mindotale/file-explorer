@@ -155,6 +155,11 @@ void* request_handler(void* param)
 
                 break;
             }
+            default:
+            {
+                printf("Invalid message type: %d\n", type);
+                break;
+            }
         }
 
 
