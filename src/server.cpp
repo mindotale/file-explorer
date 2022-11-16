@@ -99,22 +99,64 @@ void* request_handler(void* param)
 {
     int  client_socket_fd, bytes_read, bytes_sent;
 
-    Buffer buffer;
-    Buffer response_msg;
-    response_msg.putstring("Response from the server.");
-
     client_socket_fd = *((int*)param);
 
     while(true)
     {
+        Buffer buffer;
+        Buffer response_msg;
+
         bytes_read = recv(client_socket_fd, (void*)buffer, buffer.max_size(), 0);
 
-        if(bytes_read > 0)
+        if(bytes_read <= 0) continue;
+
+        printf("Message read (%d byte(s))\n", bytes_read);
+
+        int type = buffer.getint();
+
+        switch(type)
         {
-            printf("Message read (%d byte(s)): %s\n", bytes_read, buffer.getstring().c_str());
+            case NetworkChangeDir:
+            {
+                std::string client_dir = "/";
+                std::string path = buffer.getstring();
+
+                client_dir += path;
+
+                response_msg.putint(NetworkChangeDir); // type
+                response_msg.putint(0);                // error
+                response_msg.putstring(client_dir);    // new path
+
+                break;
+            }
+            case NetworkListFiles:
+            {
+                response_msg.putint(NetworkListFiles); // type
+                response_msg.putint(5);                // number of files and dirs
+               
+                response_msg.putint(0);                // is dir
+                response_msg.putstring("file1.txt");   // filename
+                response_msg.putint(59238);            // size in bytes
+                response_msg.putint(1668625530);       // timestamp
+
+                response_msg.putint(0);                // is dir
+                response_msg.putstring("file2.txt");   // filename
+                response_msg.putint(118476);           // size in bytes
+                response_msg.putint(1558625530);       // timestamp
+
+                response_msg.putint(1);                // is dir
+                response_msg.putstring("dir1");        // dirname
+
+                response_msg.putint(1);                // is dir
+                response_msg.putstring("dir2");        // dirname
+
+                response_msg.putint(1);                // is dir
+                response_msg.putstring("dir2");        // dirname
+
+                break;
+            }
         }
 
-        buffer.clear();
 
         bytes_sent = send(client_socket_fd, (void*)response_msg, response_msg.size(), MSG_NOSIGNAL);
         if(bytes_sent <= 0)
