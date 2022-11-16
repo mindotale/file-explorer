@@ -19,8 +19,11 @@ public:
     std::string getstring();
     void putstring(std::string str);
 
-    int size();
+    void clear();
     void reset_offset();
+
+    int size();
+    int max_size();
 
     explicit operator char*() { return buffer; }
     explicit operator void*() { return buffer; }

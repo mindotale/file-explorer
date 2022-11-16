@@ -5,8 +5,9 @@
 #include <sys/socket.h>
 #include <arpa/inet.h>
 
+#include "buffer.h"
+
 #define PORT 9554
-#define BUFFER_SIZE 1024
 
 int main(int argc, char const *argv[])
 {
@@ -16,8 +17,10 @@ int main(int argc, char const *argv[])
     struct sockaddr_in server_addr;
     const char *ip_str = "127.0.0.1";
 
-    char buffer[BUFFER_SIZE] = {0};
-    char *request_msg = "Request from the client.";
+    Buffer buffer;
+
+    Buffer request_msg;
+    request_msg.putstring("Request from the client.");
 
     server_socket_fd = socket(AF_INET, SOCK_STREAM, 0);
     if (server_socket_fd < 0)
@@ -73,7 +76,7 @@ int main(int argc, char const *argv[])
             break;
         case 2:
             printf("Sending a message...\n");
-            bytes_sent = send(server_socket_fd, request_msg, strlen(request_msg), 0);
+            bytes_sent = send(server_socket_fd, (void*)request_msg, request_msg.size(), 0);
             if (bytes_sent < 0)
             {
                 printf("Error.\n");
@@ -85,16 +88,18 @@ int main(int argc, char const *argv[])
             break;
         case 3:
             printf("Reading a message...\n");
-            bytes_read = recv(server_socket_fd, buffer, BUFFER_SIZE, MSG_DONTWAIT);
+            bytes_read = recv(server_socket_fd, (void*)buffer, buffer.max_size(), MSG_DONTWAIT);
             if (bytes_read < 0)
             {
                 printf("Error.\n");
             }
             else
             {
-                printf("Message read (%d byte(s)):\n%s\n", bytes_read, buffer);
+                printf("Message read (%d byte(s)): %s\n", bytes_read, buffer.getstring().c_str());
             }
-            buffer[0] = '\0';
+
+            buffer.clear();
+
             break;
         default:
             printf("Unknown operation code.");

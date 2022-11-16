@@ -85,12 +85,23 @@ std::string Buffer::getstring()
     return str;
 }
 
-int Buffer::size()
+void Buffer::clear()
 {
-    return buf_size;
+    buf_size = 0;
+    offset = 0;
 }
 
 void Buffer::reset_offset()
 {
     offset = 0;
+}
+
+int Buffer::size()
+{
+    return buf_size;
+}
+
+int Buffer::max_size()
+{
+    return BUFFER_SIZE;
 }

@@ -7,8 +7,9 @@
 #include <netinet/in.h>
 #include <pthread.h>
 
+#include "buffer.h"
+
 #define PORT 9554
-#define BUFFER_SIZE 1024
 #define QUEUE_SIZE 8
 
 void* request_handler(void* param);
@@ -97,15 +98,21 @@ int main(int argc, char const *argv[])
 void* request_handler(void* param)
 {
     int  client_socket_fd, bytes_read, bytes_sent;
-    char buffer[BUFFER_SIZE] = {0};
-    char *response_msg = "Response from the server.";
+
+    Buffer buffer;
+    Buffer response_msg;
+    response_msg.putstring("Response from the server.");
 
     client_socket_fd = *((int*)param);
 
     while(true)
     {
-        bytes_read = recv(client_socket_fd, buffer, BUFFER_SIZE, 0);
-        bytes_sent = send(client_socket_fd, response_msg, strlen(response_msg), MSG_NOSIGNAL);
+        bytes_read = recv(client_socket_fd, (void*)buffer, buffer.max_size(), 0);
+
+        printf("Message read (%d byte(s)): %s\n", bytes_read, buffer.getstring().c_str());  
+        buffer.clear();
+
+        bytes_sent = send(client_socket_fd, (void*)response_msg, response_msg.size(), MSG_NOSIGNAL);
         if(bytes_sent <= 0)
         {
             break;
