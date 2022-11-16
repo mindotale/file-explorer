@@ -5,22 +5,22 @@
 #include <unistd.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
+#include <pthread.h>
 
 #define PORT 8080
 #define BUFFER_SIZE 1024
 #define QUEUE_SIZE 8
 
+void* request_handler(void* param);
+
 int main(int argc, char const *argv[])
 {
     printf("Server started.\n");
 
-    int server_socket_fd, client_socket_fd, bytes_read;
+    int server_socket_fd, client_socket_fd;
     struct sockaddr_in server_addr;
     int server_addr_len = sizeof(server_addr);
     int opt = 1;
-
-    char buffer[BUFFER_SIZE] = {0};
-    char *hello_msg = "Hello from server!";
 
     // Creating socket file descriptor
     server_socket_fd = socket(AF_INET, SOCK_STREAM, 0);
@@ -72,14 +72,19 @@ int main(int argc, char const *argv[])
             perror("Accept failed.");
             exit(EXIT_FAILURE);
         }
+        printf("Connection accepted.\n");
 
-        bytes_read = recv(client_socket_fd, buffer, BUFFER_SIZE, 0);
-        printf("%s\n", buffer);
-        send(client_socket_fd, hello_msg, strlen(hello_msg), 0);
-        printf("Hello message sent.\n");
-
-        // Closing the connected socket
-        close(client_socket_fd);
+        pthread_t tid;
+		if(pthread_create(
+            &tid,
+            NULL, 
+            &request_handler, 
+            &client_socket_fd) != 0)
+		{
+			perror("Pthread_create failed.");
+            exit(EXIT_FAILURE);
+		}
+        printf("Created request handler.\n");
     }
 
     // Closing the server socket
@@ -87,4 +92,22 @@ int main(int argc, char const *argv[])
 
     printf("Server ended.\n");
     return 0;
+}
+
+void* request_handler(void* param)
+{
+    int  client_socket_fd, bytes_read;
+    char buffer[BUFFER_SIZE] = {0};
+    char *response_msg = "Response from the server.";
+
+    client_socket_fd = *((int*)param);
+
+    while(true)
+    {
+        bytes_read = recv(client_socket_fd, buffer, BUFFER_SIZE, 0);
+        send(client_socket_fd, response_msg, strlen(response_msg), 0);
+    }
+    
+    close(client_socket_fd);
+    pthread_exit(NULL);
 }

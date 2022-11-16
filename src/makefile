@@ -1,6 +1,6 @@
 all: buffer.o client.o server.o
 	g++ buffer.o client.o -o client
-	g++ buffer.o server.o -o server
+	g++ buffer.o server.o -o server -lpthread
 	rm -f *.o
 
 client: buffer.o client.o
