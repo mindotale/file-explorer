@@ -1,114 +1,252 @@
 #include <stdio.h>
+#include <iostream>
 #include <string.h>
+#include <vector>
+#include <deque>
 
 #include <unistd.h>
 #include <sys/socket.h>
 #include <arpa/inet.h>
 
 #include "protocol.h"
+#include "client.h"
 #include "buffer.h"
+
+int sock = -1;
+std::string current_path = "/";
+std::deque<std::string> console_buffer;
 
 int main(int argc, char const *argv[])
 {
-    printf("Client started.\n");
+    add_to_console_buffer("Client started.");
 
-    int server_socket_fd, bytes_read, bytes_sent, op_code;
     struct sockaddr_in server_addr;
-    const char *ip_str = "127.0.0.1";
+    server_addr.sin_family = AF_INET;
+    server_addr.sin_port = htons(PORT);
+
+    sock = socket(AF_INET, SOCK_STREAM, 0);
+
+    if(sock < 0)
+    {
+        add_to_console_buffer("Socket creation error.");
+        return -1;
+    }
+
+    // Convert IPv4 and IPv6 addresses from text to binary form
+    if(inet_pton(AF_INET, IP, &server_addr.sin_addr) <= 0)
+    {
+        add_to_console_buffer("Invalid address or address is not supported.");
+        return -1;
+    }
+
+    char msg[256];
+    sprintf(msg, "Trying to connect to %s...", IP);
+    add_to_console_buffer(msg);
+
+    if(connect(sock, (struct sockaddr *)&server_addr, sizeof(server_addr)) < 0)
+    {
+        add_to_console_buffer("Connection failed.");
+        return -1;
+    }
+    
+    add_to_console_buffer("Connection established.\n");
+
+    read_inputs();
+
+    // Closing the connected socket
+    close(sock);
+    
+    add_to_console_buffer("Client ended.");
+    return 0;
+}
+
+void read_inputs()
+{
+    int bytes_read, bytes_sent;
 
     Buffer buffer;
 
     Buffer request_msg;
     request_msg.putstring("Request from the client.");
 
-    server_socket_fd = socket(AF_INET, SOCK_STREAM, 0);
-    if (server_socket_fd < 0)
+    char msg[256];
+
+    while(true)
     {
-        printf("Socket creation error.\n");
-        return -1;
-    }
+        printf("client@%s:%s$ ", IP, current_path.c_str());
+        std::string command;
+        
+        getline(std::cin, command);
 
-    server_addr.sin_family = AF_INET;
-    server_addr.sin_port = htons(PORT);
+        sprintf(msg, "client@%s:%s$ %s", IP, current_path.c_str(), command.c_str());
+        add_to_console_buffer(msg);
 
-    // Convert IPv4 and IPv6 addresses from text to binary form
-    if (inet_pton(AF_INET, ip_str, &server_addr.sin_addr) <= 0)
-    {
-        printf("Invalid address or address is not supported.\n");
-        return -1;
-    }
-
-    printf("Trying to %s...\n", ip_str);
-    if (connect(
-            server_socket_fd,
-            (struct sockaddr *)&server_addr,
-            sizeof(server_addr)) < 0)
-    {
-        printf("Connection failed.\n");
-        return -1;
-    }
-    printf("Connection established.\n");
-
-    printf(
-        "0 - Exit\n"
-        "1 - Help\n"
-        "2 - Send message\n"
-        "3 - Recieve message\n");
-    while (true)
-    {
-        printf("> ");
-        scanf("%d", &op_code);
-
-        if (op_code == 0)
+        if(command == "")
+        {
+            continue;
+        }
+        else if(command == "quit")
         {
             break;
         }
-
-        switch (op_code)
+        else if(command == "clear")
         {
-        case 1:
-            printf(
-                "0 - Exit\n"
-                "1 - Help\n"
-                "2 - Send message\n"
-                "3 - Recieve message\n");
-            break;
-        case 2:
-            printf("Sending a message...\n");
-            bytes_sent = send(server_socket_fd, (void*)request_msg, request_msg.size(), 0);
-            if (bytes_sent < 0)
+            console_buffer.clear();
+            update_console();
+        }
+        else if(command == "ls")
+        {
+            Buffer request;
+            request.putint(NetworkListFiles); // type
+            request.putstring(current_path);  // dir path
+
+            bytes_sent = send(sock, (void*)request, request.size(), 0);
+
+            if(bytes_sent <= 0)
             {
-                printf("Error.\n");
+                add_to_console_buffer("Couldn't send request to the server.");
+                continue;
+            }
+
+            Buffer response;
+            bytes_read = recv(sock, (void*)response, response.max_size(), 0);
+
+            if(bytes_read <= 0 || response.getint() != NetworkListFiles)
+            {
+                add_to_console_buffer("Received invalid response from the server.");
+                continue;
+            }
+
+            int n = response.getint();
+
+            for(int i = 0; i < n; ++i)
+            {
+                int is_dir = response.getint();
+
+                if(is_dir == 0)
+                {
+                    std::string filename = response.getstring();
+                    int size = response.getint();
+                    int creation_datetime = response.getint();
+
+                    sprintf(msg, "%9s %32s %i %i", "directory", filename.c_str(), size, creation_datetime);
+                    add_to_console_buffer(msg);
+                }
+                else
+                {
+                    std::string dirname = response.getstring();
+                    sprintf(msg, "%9s %32s", "file", dirname.c_str());
+                    add_to_console_buffer(msg);
+                }
+            }
+        }
+        else
+        {
+            std::vector<std::string> splits = split_string(command);
+
+            // If split_string doesn't return anything splits[0] is the whole command
+            if(splits.size() < 1)
+            {
+                splits.push_back(command);
+            }
+
+            if(splits[0] == "cd")
+            {
+                if(splits.size() == 1)
+                {
+                    // If splits only has "cd" and no path, set path to the currenty directory
+                    splits.push_back(".");
+                }
+
+                Buffer request;
+                request.putint(NetworkChangeDir); // type
+                request.putstring(splits[1]);     // relative path
+
+                bytes_sent = send(sock, (void*)request, request.size(), 0);
+
+                if(bytes_sent <= 0)
+                {
+                    add_to_console_buffer("Couldn't send request to the server.");
+                    continue;
+                }
+
+                Buffer response;
+                bytes_read = recv(sock, (void*)response, response.max_size(), 0);
+
+                if(bytes_read <= 0 || response.getint() != NetworkChangeDir)
+                {
+                    add_to_console_buffer("Received invalid response from the server.");
+                    continue;
+                }
+
+                int error = response.getint();
+
+                if(!error)
+                {
+                    std::string new_path = response.getstring();
+                    current_path = new_path;
+                    update_console();
+                }
             }
             else
             {
-                printf("Message sent (%d byte(s)).\n", bytes_sent);
+                sprintf(msg, "Command \"%s\" is invalid", splits[0].c_str());
+                add_to_console_buffer(msg);
             }
-            break;
-        case 3:
-            printf("Reading a message...\n");
-            bytes_read = recv(server_socket_fd, (void*)buffer, buffer.max_size(), MSG_DONTWAIT);
-            if (bytes_read < 0)
-            {
-                printf("Error.\n");
-            }
-            else
-            {
-                printf("Message read (%d byte(s)): %s\n", bytes_read, buffer.getstring().c_str());
-            }
-
-            buffer.clear();
-
-            break;
-        default:
-            printf("Unknown operation code.");
-            break;
         }
     }
+}
 
-    // Closing the connected socket
-    close(server_socket_fd);
-    
-    printf("Client endend.\n");
-    return 0;
+void add_to_console_buffer(std::string str)
+{
+    console_buffer.push_back(str);
+
+    while(console_buffer.size() > HEIGHT)
+    {
+        console_buffer.pop_front();
+    }
+
+    update_console();
+}
+
+void print_bar()
+{
+    for(int i = 0; i < WIDTH; ++i)
+    {
+        printf("-");
+    }
+
+    printf("\n");
+}
+
+void update_console()
+{
+    system("clear"); // idk if that works on ubuntu
+
+    printf("Available commands:\n"
+           "cd    - Change directory\n"
+           "ls    - List all contents of a directory\n"
+           "clear - Clear the terminal\n"
+           "quit  - Exit the program\n");
+
+    print_bar();
+
+    for(auto i = console_buffer.begin(); i < console_buffer.end(); ++i)
+    {
+        printf("%s\n", i->c_str());
+    }
+}
+
+std::vector<std::string> split_string(std::string text)
+{
+    std::vector<std::string> words;
+
+    size_t pos = 0;
+    while((pos = text.find(" ")) != std::string::npos)
+    {
+        words.push_back(text.substr(0, pos));
+        text.erase(0, pos + 1);
+    }
+
+    return words;
 }
