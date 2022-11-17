@@ -35,3 +35,4 @@
 src/client
 src/server
 .vscode/tasks.json
+src/.vscode/settings.json
