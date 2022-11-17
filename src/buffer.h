@@ -16,6 +16,9 @@ public:
     int getint();
     void putint(int num);
 
+    char getchar();
+    void putchar(char num);
+
     std::string getstring();
     void putstring(std::string str);
 
@@ -27,6 +30,9 @@ public:
 
     explicit operator char*() { return buffer; }
     explicit operator void*() { return buffer; }
+
+    Buffer operator+  (Buffer &buf);
+    void   operator+= (Buffer &buf);
 
 private:
     char buffer[BUFFER_SIZE];
