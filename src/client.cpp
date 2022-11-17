@@ -30,14 +30,14 @@ int main(int argc, char const *argv[])
 
     if(sock < 0)
     {
-        add_to_console_buffer("Socket creation error.");
+        add_to_console_buffer("\033[1;31mSocket creation error.\033[0m");
         return -1;
     }
 
     // Convert IPv4 and IPv6 addresses from text to binary form
     if(inet_pton(AF_INET, IP, &server_addr.sin_addr) <= 0)
     {
-        add_to_console_buffer("Invalid address or address is not supported.");
+        add_to_console_buffer("\033[1;31mInvalid address or address is not supported.\033[0m");
         return -1;
     }
 
@@ -47,11 +47,11 @@ int main(int argc, char const *argv[])
 
     if(connect(sock, (struct sockaddr *)&server_addr, sizeof(server_addr)) < 0)
     {
-        add_to_console_buffer("Connection failed.");
+        add_to_console_buffer("\033[1;31mConnection failed.\033[0m");
         return -1;
     }
     
-    add_to_console_buffer("Connection established.\n");
+    add_to_console_buffer("\033[1;32mConnection established.\033[0m\n");
 
     read_inputs();
 
@@ -67,20 +67,21 @@ void read_inputs()
     int bytes_read, bytes_sent;
 
     Buffer buffer;
-
     Buffer request_msg;
-    request_msg.putstring("Request from the client.");
 
     char msg[256];
 
     while(true)
     {
-        printf("client@%s:%s$ ", IP, current_path.c_str());
+        buffer.clear();
+        request_msg.clear();
+
+        printf("\033[1;32mclient@%s\033[0m:\033[1;34m%s\033[0m$ ", IP, current_path.c_str());
         std::string command;
         
         getline(std::cin, command);
 
-        sprintf(msg, "client@%s:%s$ %s", IP, current_path.c_str(), command.c_str());
+        sprintf(msg, "\033[1;32mclient@%s\033[0m:\033[1;34m%s\033[0m$ %s", IP, current_path.c_str(), command.c_str());
         add_to_console_buffer(msg);
 
         if(command == "")
@@ -106,7 +107,7 @@ void read_inputs()
 
             if(bytes_sent <= 0)
             {
-                add_to_console_buffer("Couldn't send request to the server.");
+                add_to_console_buffer("\033[1;31mCouldn't send request to the server.\033[0m");
                 continue;
             }
 
@@ -115,7 +116,7 @@ void read_inputs()
 
             if(bytes_read <= 0 || response.getint() != NetworkListFiles)
             {
-                add_to_console_buffer("Received invalid response from the server.");
+                add_to_console_buffer("\033[1;31mReceived invalid response from the server.\033[0m");
                 continue;
             }
 
@@ -140,7 +141,7 @@ void read_inputs()
                 else
                 {
                     std::string dirname = response.getstring();
-                    sprintf(msg, "%-9s %-32s", "directory", dirname.c_str());
+                    sprintf(msg, "\033[1;34m%-9s %-32s\033[0m", "directory", dirname.c_str());
                     add_to_console_buffer(msg);
                 }
             }
@@ -171,7 +172,7 @@ void read_inputs()
 
                 if(bytes_sent <= 0)
                 {
-                    add_to_console_buffer("Couldn't send request to the server.");
+                    add_to_console_buffer("\033[1;31mCouldn't send request to the server.\033[0m");
                     continue;
                 }
 
@@ -180,7 +181,7 @@ void read_inputs()
 
                 if(bytes_read <= 0 || response.getint() != NetworkChangeDir)
                 {
-                    add_to_console_buffer("Received invalid response from the server.");
+                    add_to_console_buffer("\033[1;31mReceived invalid response from the server.\033[0m");
                     continue;
                 }
 
@@ -194,7 +195,7 @@ void read_inputs()
                 }
                 else
                 {
-                    sprintf(msg, "Couldn't go to directory \"%s\" - No such directory", splits[1].c_str());
+                    sprintf(msg, "\033[1;31mCouldn't go to directory \"%s\" - No such directory\033[0m", splits[1].c_str());
                     add_to_console_buffer(msg);
                 }
             }
