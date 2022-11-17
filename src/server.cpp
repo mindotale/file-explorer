@@ -141,10 +141,12 @@ void *request_handler(void *param)
         case NetworkListFiles:
         {
             printf("NetworkListFiles request.\n");
-            std::stringstream ss;
-            std::string temp;
+
             int ent_count = 0;
             struct stat ent_stat;
+            Buffer temp;
+
+            response.putint(NetworkListFiles);
 
             if ((dir = opendir(current_dir.c_str())) != NULL)
             {
@@ -152,29 +154,26 @@ void *request_handler(void *param)
                 // list all the files and directories within directory
                 while ((ent = readdir(dir)) != NULL)
                 {
-                    stat(ent->d_name, &ent_stat);
                     ent_count++;
-                    if(S_ISDIR(ent_stat.st_mode))
+                    
+                    stat(ent->d_name, &ent_stat);
+                    if (S_ISDIR(ent_stat.st_mode))
                     {
-                        ss<<1<<" ";
-                        ss<<ent->d_name<<" ";
+                        temp.putint(1);
+                        temp.putstring(ent->d_name);
                     }
                     else
                     {
-                        ss<<0<<" ";
-                        ss<<ent->d_name<<" ";
-                        ss<<ent_stat.st_size<<" ";
-                        ss<<ent_stat.st_mtim.tv_sec<<" ";
+                        temp.putint(0);
+                        temp.putstring(ent->d_name);
+                        temp.putint(ent_stat.st_size);
+                        temp.putint(ent_stat.st_mtim.tv_sec);
                     }
                 }
                 closedir(dir);
-                
-                temp = ss.str();
-                printf("Test: [%s].\n", temp.c_str());
-                
-                response.putint(NetworkListFiles);
+
                 response.putint(ent_count);
-                response.putstring(ss.str());
+                response += temp;
             }
             else
             {
