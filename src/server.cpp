@@ -118,7 +118,7 @@ void *request_handler(void *param)
             printf("Connection lost.\n");
             break;
         }
-        std::string temp;
+
         printf("Message read (%d byte(s))\n", bytes_read);
 
         int type = request.getint();
@@ -142,6 +142,7 @@ void *request_handler(void *param)
         {
             printf("NetworkListFiles request.\n");
             std::stringstream ss;
+            std::string temp;
             int ent_count = 0;
             struct stat ent_stat;
 
@@ -167,7 +168,10 @@ void *request_handler(void *param)
                     }
                 }
                 closedir(dir);
-
+                
+                temp = ss.str();
+                printf("Test: [%s].\n", temp.c_str());
+                
                 response.putint(NetworkListFiles);
                 response.putint(ent_count);
                 response.putstring(ss.str());
