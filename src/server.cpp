@@ -199,7 +199,7 @@ void *request_handler(void *param)
         }
         default:
         {
-            printf("Invalid message type: %d\n", type);
+            printf("Invalid request type: %d\n", type);
             break;
         }
         }
@@ -209,7 +209,7 @@ void *request_handler(void *param)
         printf("Sending the response...\n");
         bytes_sent = send(client_socket_fd, (void *)response, response.size(), MSG_NOSIGNAL);
         
-        if (bytes_sent < 0)
+        if (bytes_sent <= 0)
         {
             perror("Response error");
             break;
