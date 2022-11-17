@@ -16,6 +16,8 @@ extern void add_to_console_buffer(std::string str);
 extern void print_bar();
 extern void update_console();
 
+extern void init_cd_request();
+
 extern std::string human_readable_size(int size);
 extern std::string human_readable_datetime(time_t datetime);
 

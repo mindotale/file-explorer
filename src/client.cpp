@@ -53,6 +53,7 @@ int main(int argc, char const *argv[])
     
     add_to_console_buffer("\033[1;32mConnection established.\033[0m\n");
 
+    init_cd_request();
     read_inputs();
 
     // Closing the connected socket
@@ -66,16 +67,10 @@ void read_inputs()
 {
     int bytes_read, bytes_sent;
 
-    Buffer buffer;
-    Buffer request_msg;
-
     char msg[256];
 
     while(true)
     {
-        buffer.clear();
-        request_msg.clear();
-
         printf("\033[1;32mclient@%s\033[0m:\033[1;34m%s\033[0m$ ", IP, current_path.c_str());
         std::string command;
         
@@ -228,6 +223,29 @@ void print_bar()
     }
 
     printf("\n");
+}
+
+void init_cd_request()
+{
+    Buffer request;
+    Buffer response;
+
+    request.putint(NetworkChangeDir); // type
+    request.putstring(".");           // relative path
+
+    int bytes_sent = send(sock, (void*)request, request.size(), 0);
+
+    if(bytes_sent <= 0) return;
+
+    int bytes_read = recv(sock, (void*)response, response.max_size(), 0);
+
+    if(bytes_read <= 0 || response.getint() != NetworkChangeDir) return;
+
+    int error = response.getint();
+    if(error) return;
+
+    std::string new_path = response.getstring();
+    current_path = new_path;
 }
 
 void update_console()
