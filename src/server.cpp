@@ -14,10 +14,11 @@
 #include "buffer.h"
 
 #define QUEUE_SIZE 8
+#define MAX_PATH_LEN 256
 
-# define st_atime st_atim.tv_sec
-# define st_mtime st_mtim.tv_sec
-# define st_ctime st_ctim.tv_sec
+#define st_atime st_atim.tv_sec
+#define st_mtime st_mtim.tv_sec
+#define st_ctime st_ctim.tv_sec
 
 void *request_handler(void *param);
 
@@ -34,7 +35,7 @@ int main(int argc, char const *argv[])
     server_socket_fd = socket(AF_INET, SOCK_STREAM, 0);
     if (server_socket_fd < 0)
     {
-        perror("Socket failed.");
+        perror("Socket failed");
         exit(EXIT_FAILURE);
     }
 
@@ -45,7 +46,7 @@ int main(int argc, char const *argv[])
             &opt,
             sizeof(opt)))
     {
-        perror("Setsockopt failed.");
+        perror("Setsockopt failed");
         exit(EXIT_FAILURE);
     }
     server_addr.sin_family = AF_INET;
@@ -58,18 +59,19 @@ int main(int argc, char const *argv[])
             (struct sockaddr *)&server_addr,
             sizeof(server_addr)) < 0)
     {
-        perror("Bind failed.");
+        perror("Bind failed");
         exit(EXIT_FAILURE);
     }
 
     if (listen(server_socket_fd, QUEUE_SIZE) < 0)
     {
-        perror("Listen failed.");
+        perror("Listen failed");
         exit(EXIT_FAILURE);
     }
 
     while (true)
     {
+        // Waiting for new client connections
         printf("Waiting for connections...\n");
         client_socket_fd = accept(
             server_socket_fd,
@@ -77,22 +79,23 @@ int main(int argc, char const *argv[])
             (socklen_t *)&server_addr_len);
         if (client_socket_fd < 0)
         {
-            perror("Accept failed.");
+            perror("Accept failed");
             exit(EXIT_FAILURE);
         }
         printf("Connection accepted.\n");
 
-        pthread_t tid;
+        // Creating a request handler for the accepted client
+        pthread_t rh_tid;
         if (pthread_create(
-                &tid,
+                &rh_tid,
                 NULL,
                 &request_handler,
                 &client_socket_fd) != 0)
         {
-            perror("Pthread_create failed.");
+            perror("Pthread_create failed");
             exit(EXIT_FAILURE);
         }
-        printf("Created request handler.\n");
+        printf("Request handler created.\n");
     }
 
     // Closing the server socket
@@ -105,7 +108,9 @@ int main(int argc, char const *argv[])
 void *request_handler(void *param)
 {
     int client_socket_fd, bytes_read, bytes_sent;
-    std::string current_dir = "/";
+    Buffer request, response;
+    std::string relative_path;
+    char path[MAX_PATH_LEN] = {0};
     DIR *dir;
     struct dirent *ent;
 
@@ -113,17 +118,15 @@ void *request_handler(void *param)
 
     while (true)
     {
-        Buffer request;
-        Buffer response;
         bytes_read = recv(client_socket_fd, (void *)request, request.max_size(), 0);
 
         if (bytes_read < 0)
         {
-            printf("Connection lost.\n");
+            perror("Request error");
             break;
         }
 
-        printf("Message read (%d byte(s))\n", bytes_read);
+        printf("Request recieved (%d byte(s)).\n", bytes_read);
 
         int type = request.getint();
 
@@ -131,20 +134,29 @@ void *request_handler(void *param)
         {
         case NetworkChangeDir:
         {
-            printf("NetworkChangeDir request.\n");
-            std::string relative_path = request.getstring();
+            printf("Handling the NetworkChangeDir request...\n");
 
-            current_dir += relative_path;
+            response.putint(NetworkChangeDir);
 
-            response.putint(NetworkChangeDir); // type
-            response.putint(0);                // error
-            response.putstring(current_dir);   // new path
+            relative_path = request.getstring();
+            if (chdir(relative_path.c_str()) == 0)
+            {
+                response.putint(0);
+            }
+            else
+            {
+                perror("Chdir failed");
+                response.putint(1);
+            }
+
+            getcwd(path, MAX_PATH_LEN);
+            response.putstring(path);
 
             break;
         }
         case NetworkListFiles:
         {
-            printf("NetworkListFiles request.\n");
+            printf("Handling the NetworkListFiles request...\n");
 
             int ent_count = 0;
             struct stat ent_stat;
@@ -152,10 +164,9 @@ void *request_handler(void *param)
 
             response.putint(NetworkListFiles);
 
-            if ((dir = opendir(current_dir.c_str())) != NULL)
+            if ((dir = opendir(".")) != NULL)
             {
-                printf("Opened directory '%s'.\n", current_dir.c_str());
-                // list all the files and directories within directory
+                // List all the files and directories within directory
                 while ((ent = readdir(dir)) != NULL)
                 {
                     ent_count++;
@@ -181,30 +192,8 @@ void *request_handler(void *param)
             }
             else
             {
-                // could not open directory
+                perror("Opendir failed");
             }
-
-            // response.putint(NetworkListFiles); // type
-            // response.putint(5);                // number of files and dirs
-
-            // response.putint(0);              // is dir
-            // response.putstring("file1.txt"); // filename
-            // response.putint(59238);          // size in bytes
-            // response.putint(1668625530);     // timestamp
-
-            // response.putint(0);              // is dir
-            // response.putstring("file2.txt"); // filename
-            // response.putint(118476);         // size in bytes
-            // response.putint(1558625530);     // timestamp
-
-            // response.putint(1);         // is dir
-            // response.putstring("dir1"); // dirname
-
-            // response.putint(1);         // is dir
-            // response.putstring("dir2"); // dirname
-
-            // response.putint(1);         // is dir
-            // response.putstring("dir2"); // dirname
 
             break;
         }
@@ -215,13 +204,23 @@ void *request_handler(void *param)
         }
         }
 
+        printf("Request handled.\n");
+
+        printf("Sending the response...\n");
         bytes_sent = send(client_socket_fd, (void *)response, response.size(), MSG_NOSIGNAL);
-        response.clear();
+        
         if (bytes_sent < 0)
         {
-            printf("Connection lost.\n");
+            perror("Response error");
             break;
         }
+        else
+        {
+            printf("Response sent (%d byte(s)).\n", bytes_sent);
+        }
+
+        request.clear();
+        response.clear();
     }
 
     // Closing the client socket
