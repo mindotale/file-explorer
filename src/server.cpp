@@ -15,6 +15,10 @@
 
 #define QUEUE_SIZE 8
 
+# define st_atime st_atim.tv_sec
+# define st_mtime st_mtim.tv_sec
+# define st_ctime st_ctim.tv_sec
+
 void *request_handler(void *param);
 
 int main(int argc, char const *argv[])
@@ -155,7 +159,7 @@ void *request_handler(void *param)
                 while ((ent = readdir(dir)) != NULL)
                 {
                     ent_count++;
-                    
+
                     stat(ent->d_name, &ent_stat);
                     if (S_ISDIR(ent_stat.st_mode))
                     {
@@ -167,7 +171,7 @@ void *request_handler(void *param)
                         temp.putint(0);
                         temp.putstring(ent->d_name);
                         temp.putint(ent_stat.st_size);
-                        temp.putint(ent_stat.st_mtim.tv_sec);
+                        temp.putint(ent_stat.st_mtime);
                     }
                 }
                 closedir(dir);
@@ -212,6 +216,7 @@ void *request_handler(void *param)
         }
 
         bytes_sent = send(client_socket_fd, (void *)response, response.size(), MSG_NOSIGNAL);
+        response.clear();
         if (bytes_sent < 0)
         {
             printf("Connection lost.\n");
