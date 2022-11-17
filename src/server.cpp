@@ -1,18 +1,21 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sstream>
 
 #include <unistd.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <pthread.h>
+#include <dirent.h>
+#include <sys/stat.h>
 
 #include "protocol.h"
 #include "buffer.h"
 
 #define QUEUE_SIZE 8
 
-void* request_handler(void* param);
+void *request_handler(void *param);
 
 int main(int argc, char const *argv[])
 {
@@ -76,15 +79,15 @@ int main(int argc, char const *argv[])
         printf("Connection accepted.\n");
 
         pthread_t tid;
-		if(pthread_create(
-            &tid,
-            NULL, 
-            &request_handler, 
-            &client_socket_fd) != 0)
-		{
-			perror("Pthread_create failed.");
+        if (pthread_create(
+                &tid,
+                NULL,
+                &request_handler,
+                &client_socket_fd) != 0)
+        {
+            perror("Pthread_create failed.");
             exit(EXIT_FAILURE);
-		}
+        }
         printf("Created request handler.\n");
     }
 
@@ -95,85 +98,124 @@ int main(int argc, char const *argv[])
     return 0;
 }
 
-void* request_handler(void* param)
+void *request_handler(void *param)
 {
-    int  client_socket_fd, bytes_read, bytes_sent;
+    int client_socket_fd, bytes_read, bytes_sent;
+    std::string current_dir = "/";
+    DIR *dir;
+    struct dirent *ent;
 
-    client_socket_fd = *((int*)param);
+    client_socket_fd = *((int *)param);
 
-    while(true)
+    while (true)
     {
         Buffer request;
         Buffer response;
+        bytes_read = recv(client_socket_fd, (void *)request, request.max_size(), 0);
 
-        bytes_read = recv(client_socket_fd, (void*)request, request.max_size(), 0);
-
-        if(bytes_read < 0)
+        if (bytes_read < 0)
         {
             printf("Connection lost.\n");
             break;
         }
-
+        std::string temp;
         printf("Message read (%d byte(s))\n", bytes_read);
 
         int type = request.getint();
 
-        switch(type)
+        switch (type)
         {
-            case NetworkChangeDir:
+        case NetworkChangeDir:
+        {
+            printf("NetworkChangeDir request.\n");
+            std::string relative_path = request.getstring();
+
+            current_dir += relative_path;
+
+            response.putint(NetworkChangeDir); // type
+            response.putint(0);                // error
+            response.putstring(current_dir);   // new path
+
+            break;
+        }
+        case NetworkListFiles:
+        {
+            printf("NetworkListFiles request.\n");
+            std::stringstream ss;
+            int ent_count = 0;
+            struct stat ent_stat;
+
+            if ((dir = opendir(current_dir.c_str())) != NULL)
             {
-                std::string client_dir = "/";
-                std::string path = request.getstring();
+                printf("Opened directory '%s'.\n", current_dir.c_str());
+                // list all the files and directories within directory
+                while ((ent = readdir(dir)) != NULL)
+                {
+                    stat(ent->d_name, &ent_stat);
+                    ent_count++;
+                    if(S_ISDIR(ent_stat.st_mode))
+                    {
+                        ss<<1<<" ";
+                        ss<<ent->d_name<<" ";
+                    }
+                    else
+                    {
+                        ss<<0<<" ";
+                        ss<<ent->d_name<<" ";
+                        ss<<ent_stat.st_size<<" ";
+                        ss<<ent_stat.st_mtim.tv_sec<<" ";
+                    }
+                }
+                closedir(dir);
 
-                client_dir += path;
-
-                response.putint(NetworkChangeDir); // type
-                response.putint(0);                // error
-                response.putstring(client_dir);    // new path
-
-                break;
+                response.putint(NetworkListFiles);
+                response.putint(ent_count);
+                response.putstring(ss.str());
             }
-            case NetworkListFiles:
+            else
             {
-                response.putint(NetworkListFiles); // type
-                response.putint(5);                // number of files and dirs
-               
-                response.putint(0);                // is dir
-                response.putstring("file1.txt");   // filename
-                response.putint(59238);            // size in bytes
-                response.putint(1668625530);       // timestamp
-
-                response.putint(0);                // is dir
-                response.putstring("file2.txt");   // filename
-                response.putint(118476);           // size in bytes
-                response.putint(1558625530);       // timestamp
-
-                response.putint(1);                // is dir
-                response.putstring("dir1");        // dirname
-
-                response.putint(1);                // is dir
-                response.putstring("dir2");        // dirname
-
-                response.putint(1);                // is dir
-                response.putstring("dir2");        // dirname
-
-                break;
+                // could not open directory
             }
-            default:
-            {
-                printf("Invalid message type: %d\n", type);
-                break;
-            }
+
+            // response.putint(NetworkListFiles); // type
+            // response.putint(5);                // number of files and dirs
+
+            // response.putint(0);              // is dir
+            // response.putstring("file1.txt"); // filename
+            // response.putint(59238);          // size in bytes
+            // response.putint(1668625530);     // timestamp
+
+            // response.putint(0);              // is dir
+            // response.putstring("file2.txt"); // filename
+            // response.putint(118476);         // size in bytes
+            // response.putint(1558625530);     // timestamp
+
+            // response.putint(1);         // is dir
+            // response.putstring("dir1"); // dirname
+
+            // response.putint(1);         // is dir
+            // response.putstring("dir2"); // dirname
+
+            // response.putint(1);         // is dir
+            // response.putstring("dir2"); // dirname
+
+            break;
+        }
+        default:
+        {
+            printf("Invalid message type: %d\n", type);
+            break;
+        }
         }
 
-
-        bytes_sent = send(client_socket_fd, (void*)response, response.size(), MSG_NOSIGNAL);
-        if(bytes_sent <= 0)
+        bytes_sent = send(client_socket_fd, (void *)response, response.size(), MSG_NOSIGNAL);
+        if (bytes_sent < 0)
         {
+            printf("Connection lost.\n");
             break;
         }
     }
-    
+
     // Closing the client socket
     close(client_socket_fd);
     printf("Connection closed.\n");
