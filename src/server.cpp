@@ -31,7 +31,7 @@ int main(int argc, char const *argv[])
     int server_addr_len = sizeof(server_addr);
     int opt = 1;
 
-    // Creating socket file descriptor
+    // Creating a socket file descriptor
     server_socket_fd = socket(AF_INET, SOCK_STREAM, 0);
     if (server_socket_fd < 0)
     {
@@ -39,9 +39,10 @@ int main(int argc, char const *argv[])
         exit(EXIT_FAILURE);
     }
 
-    // Forcefully attaching socket to the port PORT
+    // Forcefully attaching the socket to the port PORT
     if (setsockopt(
-            server_socket_fd, SOL_SOCKET,
+            server_socket_fd,
+            SOL_SOCKET,
             SO_REUSEADDR,
             &opt,
             sizeof(opt)))
@@ -53,7 +54,6 @@ int main(int argc, char const *argv[])
     server_addr.sin_addr.s_addr = INADDR_ANY;
     server_addr.sin_port = htons(PORT);
 
-    // Forcefully attaching socket to the port PORT
     if (bind(
             server_socket_fd,
             (struct sockaddr *)&server_addr,
@@ -63,6 +63,7 @@ int main(int argc, char const *argv[])
         exit(EXIT_FAILURE);
     }
 
+    // Start listening for new connections
     if (listen(server_socket_fd, QUEUE_SIZE) < 0)
     {
         perror("Listen failed");
@@ -71,7 +72,7 @@ int main(int argc, char const *argv[])
 
     while (true)
     {
-        // Waiting for new client connections
+        // Waiting for new client connections and creating a client socket
         printf("Waiting for connections...\n");
         client_socket_fd = accept(
             server_socket_fd,
@@ -208,7 +209,7 @@ void *request_handler(void *param)
 
         printf("Sending the response...\n");
         bytes_sent = send(client_socket_fd, (void *)response, response.size(), MSG_NOSIGNAL);
-        
+
         if (bytes_sent <= 0)
         {
             perror("Response error");
